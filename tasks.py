@@ -35,7 +35,7 @@ def env(c):
 
 @invoke.task
 def install(c):
-    invoke_run("pip install -r requirements.txt -r requirements-dev.txt")
+    invoke_run("pip install -r requirements.txt -r requirements-dev.txt -r frontend/requirements.txt")
 
 
 # CDK
