@@ -63,3 +63,11 @@ def test(c):
 @invoke.task
 def test_unit(c):
     invoke_run("pytest -v tests/unit")
+
+@invoke.task
+def front(c):
+    logging.info("start frontend")
+    invoke_run(
+        "streamlit run frontend/app.py --logger.level=debug",
+    )
+    logging.info("finish")
