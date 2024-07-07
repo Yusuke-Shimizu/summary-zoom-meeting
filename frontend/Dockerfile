@@ -9,11 +9,12 @@ COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションのコピー
-COPY . .
+COPY *.py .
 
 # Streamlitの設定
 EXPOSE 8501
-ENV STREAMLIT_SERVER_PORT 8501
+
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
 # アプリケーションの起動
-CMD ["streamlit", "run", "app.py"]
+ENTRYPOINT [ "streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false"]
