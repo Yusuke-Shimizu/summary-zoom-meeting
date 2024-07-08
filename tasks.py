@@ -1,7 +1,6 @@
 import invoke
 import logging
 import os
-import boto3
 
 logger = logging.getLogger(__name__)
 fmt = "%(asctime)s %(levelname)s %(name)s :%(message)s"
@@ -13,20 +12,6 @@ def invoke_run(command):
     invoke.run(command, pty=True)
 
 
-def get_aws_account_info():
-    # セッションを作成
-    session = boto3.session.Session()
-
-    # STSクライアントを使用してアカウントIDを取得
-    sts_client = session.client("sts")
-    account_id = sts_client.get_caller_identity()["Account"]
-
-    # セッションからリージョン名を取得
-    region = session.region_name
-
-    return account_id, region
-
-
 @invoke.task
 def env(c):
     invoke_run("python3 -m venv .venv")
@@ -35,7 +20,9 @@ def env(c):
 
 @invoke.task
 def install(c):
-    invoke_run("pip install -r requirements.txt -r requirements-dev.txt -r frontend/requirements.txt")
+    invoke_run(
+        "pip install -r requirements.txt -r requirements-dev.txt -r frontend/requirements.txt"
+    )
 
 
 # CDK
@@ -54,7 +41,6 @@ def hotswap(c):
     invoke_run("cdk deploy --require-approval never --hotswap")
 
 
-
 @invoke.task
 def test(c):
     invoke_run("pytest -v")
@@ -63,6 +49,7 @@ def test(c):
 @invoke.task
 def test_unit(c):
     invoke_run("pytest -v tests/unit")
+
 
 @invoke.task
 def front(c):
