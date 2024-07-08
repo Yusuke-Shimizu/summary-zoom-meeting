@@ -55,6 +55,27 @@ def test_unit(c):
 def front(c):
     logging.info("start frontend")
     invoke_run(
-        "streamlit run frontend/app.py --logger.level=debug",
+        "streamlit run frontend/app.py --logger.level=debug --server.port=8501 --server.address=0.0.0.0 --browser.gatherUsageStats=false",
     )
     logging.info("finish")
+
+
+DOCKER_IMAGE = "frontend:latest"
+DOCKER_ANCESTOR_FILTER = f"ancestor={DOCKER_IMAGE}"
+
+
+@invoke.task
+def docker_start(c):
+    logging.info("Dockerfileを起動します")
+    invoke_run(f"docker build -t {DOCKER_IMAGE} frontend/")
+    invoke_run(f"docker run -d -p 8501:8501 {DOCKER_IMAGE}")
+    logging.info("Dockerfileの起動が完了しました")
+    invoke_run(f"docker logs -f $(docker ps -q -f {DOCKER_ANCESTOR_FILTER})")
+
+
+@invoke.task
+def docker_stop(c):
+    logging.info("Dockerfileを停止します")
+    invoke_run(f"docker stop $(docker ps -q -f {DOCKER_ANCESTOR_FILTER})")
+    invoke_run(f"docker rm $(docker ps -a -q -f {DOCKER_ANCESTOR_FILTER})")
+    logging.info("Dockerfileの停止が完了しました")
