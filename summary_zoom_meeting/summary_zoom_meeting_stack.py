@@ -1,9 +1,14 @@
 from aws_cdk import (
     Stack,
     Duration,
+    CfnOutput,
     aws_ecs as ecs,
     aws_ec2 as ec2,
     aws_ecs_patterns as ecs_patterns,
+    aws_cloudfront as cloudfront,
+    aws_cloudfront_origins as origins,
+    aws_bedrock as bedrock,
+    aws_iam as iam,
 )
 from constructs import Construct
 
@@ -18,9 +23,8 @@ class SummaryZoomMeetingStack(Stack):
 
         # ECSクラスターの作成
         cluster = ecs.Cluster(self, "MyCluster", vpc=vpc)
-
-        # cluster: ecs.Cluster
-        ecs_patterns.ApplicationLoadBalancedFargateService(
+        # ALBの作成
+        alb_fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self,
             "Service",
             cluster=cluster,
@@ -31,13 +35,31 @@ class SummaryZoomMeetingStack(Stack):
                 container_name="frontend-container",
                 container_port=8501,
                 enable_logging=True,
-                # environment={
-                #     "STREAMLIT_SERVER_PORT": "8501",
-                #     "STREAMLIT_SERVER_ENABLE_CORS": "true",  # ここを修正
-                #     "STREAMLIT_SERVER_HEADLESS": "true",
-                #     "STREAMLIT_SERVER_ADDRESS": "0.0.0.0",
-                #     "STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION": "false"  # ここを追加
-                # }
             ),
             public_load_balancer=True,
+        )
+
+        # Bedrockへの権限をタスクに追加
+        alb_fargate_service.task_definition.add_to_task_role_policy(
+            iam.PolicyStatement(
+                actions=["bedrock:*"],
+                resources=["*"]
+            )
+        )
+        
+        # CloudFrontの作成
+        cloudfront_distribution = cloudfront.Distribution(self, "MyDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.LoadBalancerV2Origin(
+                    alb_fargate_service.load_balancer,
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY
+                ),
+                cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,  # キャッシュを無効化
+                origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+            )
+        )
+        # アクセスするためのFQDNを出力
+        CfnOutput(self, "CloudFrontDomainName",
+            value=cloudfront_distribution.domain_name,
+            description="The domain name of the CloudFront distribution"
         )
